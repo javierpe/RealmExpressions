@@ -22,7 +22,51 @@ Build strings expressions and transform it to Realm objects.
 ```
 
 # Usage
+1. RealmExpression instance
+```
+RealmExpression.init(Realm.getDefaultInstance(), context);
+```
+2. Build engine
+```
+ RealmExpression engine = new RealmExpression.Builder().addExpression(KEY, EXPRESSION);
+```
+3. Add template (Optional)
+```
+ RealmExpression engine = new RealmExpression.Builder()
+                 .addExpression(KEY, EXPRESSION)
+                 .withTemplate("Result: KEY");
+```
+# Evaluation
+1. Synchronous evaluation
+```
+Object result = engine.evaluateSync();
+```
+2. Asynchronous evaluation
+```
+engine.evaluateAsync(new OnEvaluationListener() {
+    @Override
+    public void onEvaluationResult(String template, Object result) {
+        System.out.println("Template: " + template);
+        System.out.println("Result: " + result);
+        System.out.println("* * * * * * * * * * *");
+    }
 
+    @Override
+    public void onExpressionResult(String key, String expression, Object result) {
+        System.out.println("Key: " + key);
+        System.out.println("Expression: " + expression);
+        System.out.println("Result: " + result);
+        System.out.println("= = = = = = = = = = = =");
+    }
+
+    @Override
+    public void onError(String key, String expression, Throwable throwable) {
+        // Some error in expression..
+    }
+});
+```
+# Environments
+You can add environments objects
 
 # License
 
