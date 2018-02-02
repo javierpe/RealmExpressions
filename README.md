@@ -24,7 +24,7 @@ Build strings expressions and transform it to Realm objects.
 # Usage
 1. RealmExpression instance
 ```
-RealmExpression.init(Realm.getDefaultInstance(), context);
+RealmExpression.init(context);
 ```
 2. Build engine
 ```
