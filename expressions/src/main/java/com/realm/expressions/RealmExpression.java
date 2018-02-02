@@ -275,7 +275,6 @@ public class RealmExpression {
         Log.i("RealmExpreesions", "Dispose all...");
     }
 
-
     /**
      * Evaluate sync
      * @return
@@ -1460,7 +1459,6 @@ public class RealmExpression {
 
         return null;
     }
-
 
     /**
      * Execute single method
