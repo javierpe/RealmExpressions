@@ -64,8 +64,6 @@ public class RealmExpression {
     // Crash when Environment is not found in current instance.
     private String environmentNotFoundException = "Environment %s not found in this instance!";
 
-    // Current Realm instance.
-    private static Realm realmInstance;
     // App Context.
     private static Context appContext;
     // All valid disposable Realm objects.
@@ -108,41 +106,35 @@ public class RealmExpression {
 
 
     // Starts with Realm instance
-    public static void init(@Nonnull Realm realm, @Nonnull Context context){
-        if(realm != null) {
+    public static void init(@Nonnull Context context){
+        if (disposableEnvironmentObejcts == null) {
+            disposableEnvironmentObejcts = new HashMap<>();
+        }
 
-            if (disposableEnvironmentObejcts == null) {
-                disposableEnvironmentObejcts = new HashMap<>();
+        if(noDisposableEnvironmentObjects == null){
+            noDisposableEnvironmentObjects = new HashMap<>();
+        }
+
+        if(nativeClasses == null) {
+            nativeClasses = new HashMap<>();
+        }
+
+        appContext = context;
+        if(context != null) {
+            // Realm DB mapping
+            Iterator<Class<? extends RealmModel>> schemaClasses = Realm.getDefaultInstance().getConfiguration().getRealmObjectClasses().iterator();
+            //environmentClasses = new ArrayList<>();
+            environmentClasses = new HashMap<>();
+            while (schemaClasses.hasNext()) {
+                Class<? extends RealmModel> schema = schemaClasses.next();
+                //environmentClasses.add(new EnvironmentClass(schema.getSimpleName().toLowerCase(), schema));
+                environmentClasses.put("_" + schema.getSimpleName().toLowerCase(), schema);
             }
 
-            if(noDisposableEnvironmentObjects == null){
-                noDisposableEnvironmentObjects = new HashMap<>();
-            }
+            loadDefaultNative();
 
-            if(nativeClasses == null) {
-                nativeClasses = new HashMap<>();
-            }
-
-            appContext = context;
-            if(context != null) {
-                realmInstance = realm;
-                // Realm DB mapping
-                Iterator<Class<? extends RealmModel>> schemaClasses = realmInstance.getConfiguration().getRealmObjectClasses().iterator();
-                //environmentClasses = new ArrayList<>();
-                environmentClasses = new HashMap<>();
-                while (schemaClasses.hasNext()) {
-                    Class<? extends RealmModel> schema = schemaClasses.next();
-                    //environmentClasses.add(new EnvironmentClass(schema.getSimpleName().toLowerCase(), schema));
-                    environmentClasses.put("_" + schema.getSimpleName().toLowerCase(), schema);
-                }
-
-                loadDefaultNative();
-
-            }else{
-                throw new NullPointerException(contextNullMessage);
-            }
-        }else {
-            throw new NullPointerException(instanceNullMessage);
+        }else{
+            throw new NullPointerException(contextNullMessage);
         }
     }
 
@@ -225,7 +217,7 @@ public class RealmExpression {
 
             // Move RealmModel from original thread to this instance...
             if(object instanceof RealmModel){
-                object = realmInstance.copyFromRealm((RealmModel) object);
+                object = Realm.getDefaultInstance().copyFromRealm((RealmModel) object);
             }
             noDisposableEnvironmentObjects.put(key, object);
         }
@@ -275,8 +267,9 @@ public class RealmExpression {
         Log.i("RealmExpreesions", "Dispose all...");
     }
 
+
     /**
-     * Evaluate sync
+     * Evaluate Sync all expressions
      * @return
      */
     public Object evaluateSync(){
@@ -292,9 +285,8 @@ public class RealmExpression {
 
         return finalizeEvaluation();
     }
-
     /**
-     * Evaluate all RealmExpression instance.
+     * Evaluate Async all expressions
      */
     public void evaluateAsync(final OnEvaluationListener listener){
         this.listener = listener;
@@ -360,8 +352,9 @@ public class RealmExpression {
                         new IllegalStateException("Please add expressions!"));
             }
             Log.e("RealmExpressions", "Expressions not found!");
-            return null;
         }
+
+        return "null";
     }
 
     /**
@@ -370,7 +363,7 @@ public class RealmExpression {
      */
     private Flowable<Object> evaluationAsFlowable(){
 
-       return Flowable.create(new FlowableOnSubscribe<Object>() {
+        return Flowable.create(new FlowableOnSubscribe<Object>() {
             @Override
             public void subscribe(FlowableEmitter<Object> e) throws Exception {
                 if(e.isCancelled()){
@@ -607,6 +600,9 @@ public class RealmExpression {
 
             // Validation for @@
             if(!key.isEmpty()) {
+                if(environment instanceof RealmModel){
+                    environment = Realm.getDefaultInstance().copyFromRealm((RealmModel) environment);
+                }
                 addEvaluatedExpression(key, environment != null ? environment : "null");
             }
 
@@ -649,7 +645,7 @@ public class RealmExpression {
                     new MethodNotFoundException(currentKeyOnEvaluation, currentExpressionOnEvaluation, "Cannot resolve '"+ reservedWord +"'");
                 }
                 // endregion
-            // region has
+                // region has
             case "has":
                 if(environment instanceof RealmResults){
 
@@ -669,8 +665,8 @@ public class RealmExpression {
                 }else {
                     new MethodNotFoundException(currentKeyOnEvaluation, currentExpressionOnEvaluation, "Cannot resolve '"+ reservedWord +"'");
                 }
-            // endregion
-            // region first
+                // endregion
+                // region first
             case "first":
                 if(environment instanceof RealmResults){
                     if(((RealmResults)environment).size() > 0) {
@@ -697,7 +693,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     JSONObject data = new JSONObject(extra);
@@ -740,12 +736,12 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
+                // endregion
 
-            // region extendedGreaterThanOrEqualTo
+                // region extendedGreaterThanOrEqualTo
             case "extendedGreaterThanOrEqualTo":
                 try{
 
@@ -756,7 +752,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -787,11 +783,11 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
-            // region greaterThanOrEqualTo
+                // endregion
+                // region greaterThanOrEqualTo
             case "greaterThanOrEqualTo":
                 try{
 
@@ -802,7 +798,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -842,12 +838,12 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
+                // endregion
 
-            // region extendedLessThanOrEqualTo
+                // region extendedLessThanOrEqualTo
             case "extendedLessThanOrEqualTo":
                 try{
 
@@ -858,7 +854,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -889,11 +885,11 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
-            // region lessThanOrEqualTo
+                // endregion
+                // region lessThanOrEqualTo
             case "lessThanOrEqualTo":
                 try{
 
@@ -904,7 +900,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -944,12 +940,12 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
+                // endregion
 
-            // region extendedLessThan
+                // region extendedLessThan
             case "extendedLessThan":
                 try{
 
@@ -960,7 +956,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -991,11 +987,11 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
-            // region lessThan
+                // endregion
+                // region lessThan
             case "lessThan":
                 try{
 
@@ -1006,7 +1002,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -1046,12 +1042,12 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
+                // endregion
 
-            // region extendedGreaterThan
+                // region extendedGreaterThan
             case "extendedGreaterThan":
                 try{
 
@@ -1062,7 +1058,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -1093,11 +1089,11 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
-            // region greaterThan
+                // endregion
+                // region greaterThan
             case "greaterThan":
                 try{
 
@@ -1108,7 +1104,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -1148,12 +1144,12 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
+                // endregion
 
-            // region extendedEqualTo
+                // region extendedEqualTo
             case "extendedEqualTo":
 
                 try{
@@ -1165,7 +1161,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -1198,11 +1194,11 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
-            // region equalTo
+                // endregion
+                // region equalTo
             case "equalTo":
                 try{
 
@@ -1213,7 +1209,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -1255,12 +1251,12 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
+                // endregion
 
-            // region extendedNotEqualTo
+                // region extendedNotEqualTo
             case "extendedNotEqualTo":
 
                 try{
@@ -1271,7 +1267,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -1304,11 +1300,11 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
                 // endregion
-            // region notEqualTo
+                // region notEqualTo
             case "notEqualTo":
                 try{
                     RealmResults<? extends RealmModel> results = null;
@@ -1318,7 +1314,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     try {
@@ -1358,12 +1354,12 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
+                // endregion
 
-            // region allSorted
+                // region allSorted
             case "allSorted":
                 try{
                     RealmResults<? extends RealmModel> results = null;
@@ -1373,7 +1369,7 @@ public class RealmExpression {
                     }else {
 
                         Class<? extends RealmModel> newEnvironment = (Class<? extends RealmModel>) environment;
-                        results = realmInstance.where(newEnvironment).findAll();
+                        results = Realm.getDefaultInstance().where(newEnvironment).findAll();
                     }
 
                     JSONObject data = new JSONObject(extra);
@@ -1398,10 +1394,10 @@ public class RealmExpression {
 
                     return results;
                 }catch (Exception e){
+                    Log.i(TAG, "Environment "+ environment +" is not a instance of RealmResults!");
                     e.printStackTrace();
-                    throw new IllegalStateException("Environment is not a instance of RealmResults!");
                 }
-            // endregion
+                // endregion
             case "all":
                 break;
             // region get
@@ -1448,7 +1444,7 @@ public class RealmExpression {
                     return results;
                 }
 
-            // endregion
+                // endregion
             default:
                 if(listener != null){
                     listener.onError(currentKeyOnEvaluation, currentExpressionOnEvaluation, new MethodNotFoundException(currentKeyOnEvaluation, currentExpressionOnEvaluation, "Cannot resolve '"+ reservedWord +"'"));
@@ -1459,6 +1455,7 @@ public class RealmExpression {
 
         return null;
     }
+
 
     /**
      * Execute single method
