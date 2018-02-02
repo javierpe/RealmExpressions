@@ -277,54 +277,58 @@ public class RealmExpression {
 
 
     /**
+     * Evaluate sync
+     * @return
+     */
+    public Object evaluateSync(){
+        Iterator<String> keys = expressions.keySet().iterator();
+        while (keys.hasNext()){
+            String key = keys.next();
+            String value = expressions.get(key);
+            Object obj = evaluation(key, value);
+            if (listener != null) {
+                listener.onExpressionResult(currentKeyOnEvaluation, currentExpressionOnEvaluation, obj);
+            }
+        }
+
+        return finalizeEvaluation();
+    }
+
+    /**
      * Evaluate all RealmExpression instance.
      */
-    public void evaluate(boolean isAsync, final OnEvaluationListener listener){
+    public void evaluateAsync(final OnEvaluationListener listener){
         this.listener = listener;
 
-        if(isAsync) {
-            evaluationAsFlowable().doOnNext(new Consumer<Object>() {
-                @Override
-                public void accept(Object o) throws Exception {
-                    if (listener != null) {
-                        listener.onExpressionResult(currentKeyOnEvaluation, currentExpressionOnEvaluation, o);
-                    }
-                }
-            }).doOnError(new Consumer<Throwable>() {
-                @Override
-                public void accept(Throwable throwable) throws Exception {
-                    throwable.printStackTrace();
-                    if (listener != null) {
-                        listener.onError(currentKeyOnEvaluation, currentExpressionOnEvaluation, throwable);
-                    }
-                }
-            }).doOnComplete(new Action() {
-                @Override
-                public void run() throws Exception {
-                   finalizeEvaluation();
-                }
-            }).subscribeOn(Schedulers.computation())
-                    .observeOn(AndroidSchedulers.mainThread()).subscribe();
-        }else {
-            Iterator<String> keys = expressions.keySet().iterator();
-            while (keys.hasNext()){
-                String key = keys.next();
-                String value = expressions.get(key);
-                Object obj = evaluation(key, value);
+        evaluationAsFlowable().doOnNext(new Consumer<Object>() {
+            @Override
+            public void accept(Object o) throws Exception {
                 if (listener != null) {
-                    listener.onExpressionResult(currentKeyOnEvaluation, currentExpressionOnEvaluation, obj);
+                    listener.onExpressionResult(currentKeyOnEvaluation, currentExpressionOnEvaluation, o);
                 }
             }
-
-            finalizeEvaluation();
-        }
+        }).doOnError(new Consumer<Throwable>() {
+            @Override
+            public void accept(Throwable throwable) throws Exception {
+                throwable.printStackTrace();
+                if (listener != null) {
+                    listener.onError(currentKeyOnEvaluation, currentExpressionOnEvaluation, throwable);
+                }
+            }
+        }).doOnComplete(new Action() {
+            @Override
+            public void run() throws Exception {
+                finalizeEvaluation();
+            }
+        }).subscribeOn(Schedulers.computation())
+                .observeOn(AndroidSchedulers.mainThread()).subscribe();
     }
 
 
     /**
      * Finalize all evaluation
      */
-    private void finalizeEvaluation(){
+    private Object finalizeEvaluation(){
         // Replace all evaluated expressions in template.
         if (evaluatedExpressions != null) {
             String oldTemplate = template;
@@ -349,6 +353,7 @@ public class RealmExpression {
             }
 
             Log.i("RealmExpressions", "Successful template: " + result);
+            return result;
 
         } else {
             if (listener != null) {
@@ -356,6 +361,7 @@ public class RealmExpression {
                         new IllegalStateException("Please add expressions!"));
             }
             Log.e("RealmExpressions", "Expressions not found!");
+            return null;
         }
     }
 
