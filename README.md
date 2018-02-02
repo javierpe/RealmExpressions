@@ -75,7 +75,7 @@ Example: ```engine.addExpression("A", "user.@getLastName()");```
 ```isDisposable``` allows you to discard the object when necessary. 
 
 # Native classes
-A native class is accessed from all instance and whatever expression. RealmExpression has default native classes
+A native class is not a RealmObejct and can be accessed from whatever expression. RealmExpression has default native classes
 #### DateNative accessed from ```@@date```.
 ##### Methods
 Access | Return | Params | Description | Example 
