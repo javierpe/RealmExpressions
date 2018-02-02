@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         // Start evaluation... and return Object...True..RealmResult...Date...etc
-        engine.evaluate(true, new OnEvaluationListener() {
+        engine.evaluateAsync(new OnEvaluationListener() {
             @Override
             public void onEvaluationResult(String template, Object result) {
                 System.out.println("Template: " + template);
