@@ -66,7 +66,33 @@ engine.evaluateAsync(new OnEvaluationListener() {
 });
 ```
 # Environments
-You can add environments objects
+You can add environments objects or Realm models so you can use them later
+```
+RealmExpression.addEnvironmentObject("user", User.getCurrentUser(), isDisposable);
+```
+Example: ```engine.addExpression("A", "user.@getLastName()");```
+
+```isDisposable``` allows you to discard the object when necessary. 
+
+# Native classes
+A native class is accessed from all instance and whatever expression. RealmExpression has default native classes
+#### DateNative
+Access by ```@@date```.
+
+##### Methods
+Access | Return | Params | Description | Example 
+------------ | ------------- | ------------- | ------------- | -------------
+```.@now()``` | String date | Not support | Get the current date | ```@@date.@now()```
+
+# Methods
+Code | Description
+------------ | -------------
+```RealmExpression.dispose();``` | Discard all no disposable environment objects
+```RealmExpression.disposeAll()``` | Remove all environment objects
+```RealmExpression.removeEnvironment(KEY);``` | Removes an specific environment
+
+
+
 
 # License
 
