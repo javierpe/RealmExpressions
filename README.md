@@ -76,15 +76,13 @@ Example: ```engine.addExpression("A", "user.@getLastName()");```
 
 # Native classes
 A native class is accessed from all instance and whatever expression. RealmExpression has default native classes
-#### DateNative
-Access by ```@@date```.
+#### DateNative accessed from ```@@date```.
 ##### Methods
 Access | Return | Params | Description | Example 
 ------------ | ------------- | ------------- | ------------- | -------------
 ```.@now()``` | String date | Not support | Get the current date | ```@@date.@now()```
 
-#### DeviceNative
-Access by ```@@device```.
+#### DeviceNative accessed from ```@@device```.
 ##### Methods
 Access | Return | Params | Description | Example 
 ------------ | ------------- | ------------- | ------------- | -------------
@@ -94,15 +92,16 @@ Access | Return | Params | Description | Example
 ```.@appVersion()``` | String app version | Not support | Get app version name | ```@@device.@appVersion()```
 ```.@lastLocation()``` | String location | Not support | Get last know location with format ```19.0460714,-98.2267667``` | ```@@device.@lastLocation()```
 
+## Create native class
+You can create a native class extends by NativeClass and access it by you custom key. To add this class it is necessary call to ```RealmExpression.addNewNativeClass(KEY, NativeClass);```
 
-# Methods
+# Others instance methods
 Code | Description
 ------------ | -------------
 ```RealmExpression.dispose();``` | Discard all no disposable environment objects
 ```RealmExpression.disposeAll()``` | Remove all environment objects
 ```RealmExpression.removeEnvironment(KEY);``` | Removes an specific environment
-
-
+```RealmExpression.removeNativeClass(KEY);``` | Removes an specific NativeClass
 
 
 # License
