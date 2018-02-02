@@ -78,11 +78,22 @@ Example: ```engine.addExpression("A", "user.@getLastName()");```
 A native class is accessed from all instance and whatever expression. RealmExpression has default native classes
 #### DateNative
 Access by ```@@date```.
-
 ##### Methods
 Access | Return | Params | Description | Example 
 ------------ | ------------- | ------------- | ------------- | -------------
 ```.@now()``` | String date | Not support | Get the current date | ```@@date.@now()```
+
+#### DeviceNative
+Access by ```@@device```.
+##### Methods
+Access | Return | Params | Description | Example 
+------------ | ------------- | ------------- | ------------- | -------------
+```.@randomUUID()``` | String UUID | Not support | Get random UUID | ```@@device.@randomUUID()```
+```.@imei()``` | String IMEI | Not support | Get random UUID (Permission required since Android 6.0 Marshmallow) | ```@@device.@imei()```
+```.@androidVersion()``` | String Android version | Not support | Get Android Version from ```Build.VERSION.RELEASE``` | ```@@device.@androidVersion()```
+```.@appVersion()``` | String app version | Not support | Get app version name | ```@@device.@appVersion()```
+```.@lastLocation()``` | String location | Not support | Get last know location with format ```19.0460714,-98.2267667``` | ```@@device.@lastLocation()```
+
 
 # Methods
 Code | Description
