@@ -14,6 +14,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Realm.init(this);
+
     }
 
     /**
@@ -24,7 +26,6 @@ public class MainActivity extends AppCompatActivity {
         RealmExpression.init(Realm.getDefaultInstance(), this);
         // Build with default objects and native classes.
         //RealmExpression.addEnvironmentObject("user", KUser.getCurrentUser(), false);
-
 
         // Build...
         RealmExpression engine = new RealmExpression.Builder()
