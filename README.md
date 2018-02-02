@@ -104,7 +104,8 @@ Code | Description
 ```RealmExpression.removeNativeClass(KEY);``` | Removes an specific NativeClass
 
 # Please start now! :grimacing:
-
+### Write an expression
+First you should know this, an expression starts with ```@REXP(...)```
 
 
 # License
