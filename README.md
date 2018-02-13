@@ -105,8 +105,13 @@ Code | Description
 
 # Please start now! :grimacing:
 ### Write an expression
-First you should know this, an expression starts with ```@REXP(...)```
-
+Sintax | Example | Description
+------------ | ------------- | -------------
+```@@``` | ```@@device.@androidVersion()``` | For reserved words
+```$_realmClass``` | ```$_client.@byId(...)``` | For Realm method class
+```$envObjectName``` | ```$client.@getName()``` | For Realm Objects
+```2*5/10``` | ```2*5/10``` | For simple math operation
+```@REUSE(objectName.@getName())``` | ```@REUSE(B1.@getName())``` | Where B1 is instance of 'client'
 
 # Love build this #
 
