@@ -12,6 +12,8 @@ import com.realm.expressions.exceptions.MethodNotFoundException;
 import com.realm.expressions.exceptions.ParameterTypeUnsupportedException;
 import com.realm.expressions.interfaces.OnEvaluationListener;
 
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -392,6 +394,52 @@ public class RealmExpression {
         currentKeyOnEvaluation = key;
         currentExpressionOnEvaluation = value;
 
+        String[] data = value.replace(" ", "").split("(?<=[-+*/])|(?=[-+*/])");
+        if(data.length > 0){
+            StringBuilder finalString = new StringBuilder(); // Rebuild String
+            HashMap<String, Object> expressions = new HashMap<>();
+            for(String x : data){
+                if(x.equals("*") || x.equals("-") || x.equals("+")){
+                    finalString.append(x);
+                }else {
+                    // Create unique key and evaluate X
+                    String mExpression = x;
+                    String mkey = x.concat("_" + RandomStringUtils.randomAlphabetic(5).toUpperCase() + "_" + RandomStringUtils.randomAlphanumeric(5).toUpperCase());
+                    expressions.put(mkey, resolveExpression(mkey, null, depureValue(mExpression, false), "", false));
+                    finalString.append(mkey);
+                }
+            }
+
+            value = finalString.toString();
+
+            // Replace all expressions in value
+            Iterator<String> envKeys = expressions.keySet().iterator();
+            while (envKeys.hasNext()){
+                String mKey = envKeys.next();
+                String val = expressions.get(mKey).toString();
+                value = value.replace(mKey, val);
+            }
+
+            value = value.replace("+&&+", " ");
+
+            String rp = evaluateRP("@("+ value +")");
+            if(!rp.startsWith("@")){
+                value = rp;
+            }else {
+                Log.e(TAG, "Please check your sintax!");
+            }
+        }
+
+        return resolveExpression(key, null, depureValue(value, true), "", true);
+    }
+
+    /**
+     * Depure value String
+     * @param value
+     * @param isAddToList
+     * @return
+     */
+    private String depureValue(String value, boolean isAddToList){
         // Search all @RP first and evaluate it with params.
         Matcher matcherRP = Pattern.compile(matchRapidPROWithParams).matcher(value);
         HashMap<String, Object> matchesValues = new HashMap<>();
@@ -423,7 +471,7 @@ public class RealmExpression {
         matchesValues = new HashMap<>();
         while (matcherNative.find()){
             String matcherKey = matcherNative.group(0);
-            matchesValues.put(matcherKey, resolveExpression("", null, matcherKey, ""));
+            matchesValues.put(matcherKey, resolveExpression("", null, matcherKey, "", isAddToList));
         }
 
         // Replace
@@ -443,7 +491,7 @@ public class RealmExpression {
         while (matcherEnv.find()){
             String matcherKey = matcherEnv.group(0);
             String matcherValue = matcherEnv.group(1);
-            matchesValues.put(matcherKey, resolveExpression("", null, matcherValue, ""));
+            matchesValues.put(matcherKey, resolveExpression("", null, matcherValue, "", isAddToList));
         }
 
         // Replace
@@ -466,7 +514,7 @@ public class RealmExpression {
                 String matcherValue = matcherREUSE.group(1);
                 String mKey = matcherValue.split("\\.")[0];
                 matcherValue = matcherValue.replace(mKey, "");
-                matchesValues.put(matcherKey, resolveExpression(mKey, evaluatedExpressions.get(mKey), matcherValue, ""));
+                matchesValues.put(matcherKey, resolveExpression(mKey, evaluatedExpressions.get(mKey), matcherValue, "", isAddToList));
             }
 
             // Replace
@@ -479,7 +527,7 @@ public class RealmExpression {
         }
         // endregion
 
-        return resolveExpression(key, null, value, "");
+        return value;
     }
 
     /**
@@ -490,7 +538,8 @@ public class RealmExpression {
      * @param params
      * @return
      */
-    private Object resolveExpression(String key, Object environment, String expression, String params){
+    private Object resolveExpression(String key, Object environment, String expression, String params, boolean isAddToList){
+
         if(expression.startsWith("@REUSE")){
             Matcher m = Pattern.compile(mainMatchREUSE).matcher(expression);
             String data = "";
@@ -505,7 +554,7 @@ public class RealmExpression {
             expression = expression.replace(mKey, "");
 
             if(evaluatedExpressions != null && evaluatedExpressions.containsKey(mKey)){
-                return resolveExpression(key, evaluatedExpressions.get(mKey), expression, params);
+                return resolveExpression(key, evaluatedExpressions.get(mKey), expression, params, isAddToList);
             }else {
                 if(listener != null){
                     listener.onError(currentKeyOnEvaluation, currentExpressionOnEvaluation, new IllegalStateException("Please add '"+ mKey +"' first and then evaluate expression!"));
@@ -519,7 +568,7 @@ public class RealmExpression {
             while (m.find()){
                 group = m.group(1);
             }
-            return resolveExpression(key, null, group, params);
+            return resolveExpression(key, null, group, params, isAddToList);
         }else if(expression.startsWith("$")){
             Matcher m = Pattern.compile(matchKey).matcher(expression);
             String group = "";
@@ -532,7 +581,7 @@ public class RealmExpression {
             expression = expression.replace(pre, "");
             Object mEnvironment = searchEnvironment(group);
 
-            return resolveExpression(key, mEnvironment, expression, params);
+            return resolveExpression(key, mEnvironment, expression, params, isAddToList);
         }else if(expression.startsWith("@@")){
             // Native class
             Matcher m = Pattern.compile(matchNative).matcher(expression);
@@ -546,7 +595,7 @@ public class RealmExpression {
             expression = expression.replace(pre, "");
             Object mEnvironment = searchInNative(group);
 
-            return resolveExpression(key, mEnvironment, expression, params);
+            return resolveExpression(key, mEnvironment, expression, params, isAddToList);
         }else if(expression.startsWith("@") || expression.startsWith(".@")){
             if(expression.startsWith(".@")){
                 expression = expression.substring(1);
@@ -571,12 +620,12 @@ public class RealmExpression {
             if(environment instanceof Class){ // For static classes
                 b = executeMethod(null, (Class) environment, null, group, mData);
             }else if(environment == null){
-                return resolveExpression(key, environment, "", "");
+                return resolveExpression(key, environment, "", "", isAddToList);
             }else {
                 b = executeMethod(null, null, environment, group, mData);
             }
 
-            return resolveExpression(key, b, expression, mData);
+            return resolveExpression(key, b, expression, mData, isAddToList);
 
         }if(expression.startsWith(".#") || expression.startsWith("#")){ // Reserved words...
             Matcher m = Pattern.compile(matchReservedWords).matcher(expression);
@@ -595,7 +644,7 @@ public class RealmExpression {
 
             // Resolve extras
             expression = expression.replace((expression.startsWith(".#") ? ".#" : "#") + group + "("+ mData +")", "");
-            return resolveExpression(key, resolveReservedWord(group, environment, mData), expression, params);
+            return resolveExpression(key, resolveReservedWord(group, environment, mData), expression, params, isAddToList);
         }else {
 
             // Validation for @@
@@ -603,7 +652,9 @@ public class RealmExpression {
                 if(environment instanceof RealmModel){
                     environment = Realm.getDefaultInstance().copyFromRealm((RealmModel) environment);
                 }
-                addEvaluatedExpression(key, environment != null ? environment : "null");
+                if(isAddToList) {
+                    addEvaluatedExpression(key, environment != null ? environment : expression);
+                }
             }
 
             if(environment != null) {
@@ -613,7 +664,7 @@ public class RealmExpression {
                 if(listener != null){
                     listener.onError(currentKeyOnEvaluation, currentExpressionOnEvaluation, new Exception("Not found or inaccessible object!"));
                 }
-                return "null";
+                return expression;
             }
         }
     }
