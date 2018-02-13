@@ -339,6 +339,7 @@ public class RealmExpression {
                 }
             }
 
+            // TODO: + && + support for templates...
             String result = evaluateRP(template);
 
             if (listener != null) {
