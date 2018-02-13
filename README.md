@@ -17,7 +17,7 @@ Build strings expressions and transform it to Realm objects.
 2. Add the dependency
 ```
   dependencies {
-      compile 'com.github.javierpe:RealmExpressions:1.0.2'
+      compile 'com.github.javierpe:RealmExpressions:1.0.3'
   }
 ```
 
