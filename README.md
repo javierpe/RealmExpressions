@@ -113,6 +113,43 @@ Sintax | Example | Description
 ```2*5/10``` | ```2*5/10``` | For simple math operation
 ```@REUSE(objectName.@getName())``` | ```@REUSE(B1.@getName())``` | Where B1 is instance of 'client'
 
+## Examples
+``` RealmExpression.init(this);
+    
+    RealmExpression.addEnvironmentObject("user", KUser.getCurrentUser(), false);
+    
+    RealmExpression engine = new RealmExpression.Builder()
+          .addExpression("B1", "$user.@getFirstName()")
+          .withTemplate("NAME: B1");
+          
+    engine.evaluateAsync(new OnEvaluationListener() {
+            @Override
+            public void onEvaluationResult(String template, Object result) {
+                System.out.println("Template: " + template);
+                System.out.println("Result: " + result);
+                System.out.println("* * * * * * * * * * *");
+            }
+
+            @Override
+            public void onExpressionResult(String key, String expression, Object result) {
+                System.out.println("Key: " + key);
+                System.out.println("Expression: " + expression);
+                System.out.println("Result: " + result);
+                System.out.println("= = = = = = = = = = = =");
+            }
+
+            @Override
+            public void onError(String key, String expression, Throwable throwable) {
+
+            }
+        });
+
+
+```
+
+# Output
+``` NAME: Jhon ```
+
 # Love build this #
 
 # License
