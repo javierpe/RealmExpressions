@@ -17,7 +17,7 @@ Build strings expressions and transform it to Realm objects.
 2. Add the dependency
 ```
   dependencies {
-      compile 'com.github.javierpe:RealmExpressions:1.0.3'
+      implementation 'com.github.javierpe:RealmExpressions:1.0.3'
   }
 ```
 
@@ -105,8 +105,50 @@ Code | Description
 
 # Please start now! :grimacing:
 ### Write an expression
-First you should know this, an expression starts with ```@REXP(...)```
+Sintax | Example | Description
+------------ | ------------- | -------------
+```@@``` | ```@@device.@androidVersion()``` | For reserved words
+```$_realmClass``` | ```$_client.@byId(...)``` | For Realm method class
+```$envObjectName``` | ```$client.@getName()``` | For Realm Objects
+```2*5/10``` | ```2*5/10``` | For simple math operation
+```@REUSE(objectName.@getName())``` | ```@REUSE(B1.@getName())``` | Where B1 is instance of 'client'
 
+## Examples
+``` RealmExpression.init(this);
+    
+    RealmExpression.addEnvironmentObject("user", KUser.getCurrentUser(), false);
+    
+    RealmExpression engine = new RealmExpression.Builder()
+          .addExpression("B1", "$user.@getFirstName()")
+          .withTemplate("NAME: B1");
+          
+    engine.evaluateAsync(new OnEvaluationListener() {
+            @Override
+            public void onEvaluationResult(String template, Object result) {
+                System.out.println("Template: " + template);
+                System.out.println("Result: " + result);
+                System.out.println("* * * * * * * * * * *");
+            }
+
+            @Override
+            public void onExpressionResult(String key, String expression, Object result) {
+                System.out.println("Key: " + key);
+                System.out.println("Expression: " + expression);
+                System.out.println("Result: " + result);
+                System.out.println("= = = = = = = = = = = =");
+            }
+
+            @Override
+            public void onError(String key, String expression, Throwable throwable) {
+
+            }
+        });
+
+
+```
+
+# Output
+``` NAME: Jhon ```
 
 # Love build this #
 
